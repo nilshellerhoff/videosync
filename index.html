@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="activateOverlay">
+        <button onclick="disableOverlay()">Start!</button>
+    </div>
+
+    <div id="greeting">Hey there, <span id="clientID"></span>!</div>
+    <video 
+        id='video' preload="auto"
+        src="http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4"
+    >
+    </video>
+
+    <div class="inputBlock">
+        <button onclick="makeAdmin()">Assume control!</button>
+        <button onclick="enterFullScreen()" style="float:right">Fullscreen</button>
+    </div>
+    <div class="inputBlock">
+        <input type=text style="width: 300px;" id="videoSrcInput"
+            placeholder="http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4"
+        ><button onclick="setVideoSrc()">Set video source!</button>
+    </div>  
+
+    <div id="popup"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/ClientID.js"></script>    <script>
+        var socket = io();
+
+        var admin = false;
+
+        document.getElementById('clientID').textContent = clientID;
+
+        var video = document.getElementById('video');
+
+        function makeAdmin() {
+            if (!admin) {
+                admin = true;
+                document.getElementById('video').controls = true;
+                socket.emit("msg", {
+                    "clientID" : clientID,
+                    "action" : "admin assumed"
+                });
+            }
+        }
+
+        function disableAdmin() {
+            admin = false;
+            document.getElementById('video').controls = false;
+        }
+
+        function popupMsg(msg) {
+            var elm = document.getElementById('popup')
+            elm.textContent = msg;
+        
+            var newone = elm.cloneNode(true);
+            elm.parentNode.replaceChild(newone, elm);
+        }
+
+        function disableOverlay() {
+            document.getElementById('activateOverlay').style.display = "none";
+        }
+
+        function setVideoSrc() {
+            var src = document.getElementById('videoSrcInput').value ||
+                "http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4";
+            video.src = src;
+            socket.emit("msg", {
+                "clientID" : clientID,
+                "action" : "set video src",
+                "src" : src
+            })
+        }
+
+        function enterFullScreen() {
+            video.requestFullscreen();
+        }
+
+        video.addEventListener('play', (event) => {
+            if (admin) {
+                console.log("sending play");
+                event.preventDefault();
+                socket.emit("msg", {
+                    "clientID" : clientID,
+                    "action" : "play"
+                });
+            }
+        });
+
+        video.addEventListener('pause', (event) => {
+            if (admin) {
+                console.log("sending pause");
+                socket.emit("msg", {
+                    "clientID" : clientID,
+                    "action" : "pause"
+                });
+            }
+        });
+
+        video.addEventListener('seeked', (event) => {
+            if (admin) {
+                console.log("sending seeked", video.currentTime);
+                video.pause()
+                socket.emit("msg", {
+                    "clientID" : clientID,
+                    "action" : "seeked",
+                    "time" : video.currentTime
+                });
+            }
+        });
+
+        socket.on('msg', function(msg) {
+            console.log("receiving ", msg);
+            // check if clientID is different
+            if (msg.clientID != clientID) {
+                if (msg.action == "play") {
+                    video.play();
+                    popupMsg(msg.clientID + ' has started the video');
+                }
+                if (msg.action == "pause") {
+                    video.pause();
+                    popupMsg(msg.clientID + ' has paused the video');
+                }
+                if (msg.action == "seeked") {
+                    video.pause();
+                    video.currentTime = msg.time;
+                    popupMsg(msg.clientID + ' has skipped to ' + msg.time + 's');
+                }
+                if (msg.action == "admin assumed") {
+                    disableAdmin();
+                    popupMsg(msg.clientID + ' has assumed the control');
+                }
+                if (msg.action == "set video src") {
+                    popupMsg(msg.clientID + ' changed the video');
+                    video.src = msg.src;
+                }
+            }
+
+        });
+      </script>
+    </body>
+</html>
