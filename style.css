@@ -21,6 +21,9 @@ html, body {
 .inputBlock {
     display: block;
     margin: 0px 10px 10px 40px;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 button {
@@ -36,8 +39,11 @@ input {
 }
 
 video {
-    max-width: 100%;
-    max-height: 70%;
+    max-height: 80vh;
+    max-width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
 }
 
 #popup {
@@ -74,6 +80,7 @@ video {
     left: 0;
     opacity: .9;
     background-color: black;
+    z-index: 10;
 }
 
 #activateOverlay > button {
